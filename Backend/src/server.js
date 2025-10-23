@@ -19,12 +19,36 @@ const PORT = process.env.PORT || 5000;
 
 // --- Middlewares ---
 
-// CORS Configuration
+// CORS Configuration - Allow multiple origins
+const allowedOrigins = [
+  'http://localhost:5173', // Local development
+  'https://jwt-token-refresh-and-expiry-sstrae.vercel.app', // Your Vercel domain
+  'https://sstraess.vercel.app' // Your new domain
+];
+
 const corsOptions = {
-  origin: process.env.FRONTEND_URL, // Whitelist frontend URL
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, curl, etc)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      // Origin is allowed
+      return callback(null, true);
+    } else {
+      // Origin not allowed
+      logger.warn(`CORS blocked request from origin: ${origin}`);
+      return callback(new Error('Not allowed by CORS'), false);
+    }
+  },
   credentials: true, // Allow cookies
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
 };
+
 app.use(cors(corsOptions));
+
+// Handle preflight requests
+app.options('*', cors(corsOptions));
 
 // Body Parsers
 app.use(express.json());
@@ -35,7 +59,19 @@ app.use(cookieParser());
 
 // --- API Routes ---
 app.get('/api', (req, res) => {
-  res.send('API is running...');
+  res.json({ 
+    message: 'API is running...',
+    status: 'OK',
+    timestamp: new Date().toISOString()
+  });
+});
+
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'Backend server is running!',
+    status: 'OK',
+    timestamp: new Date().toISOString()
+  });
 });
 
 app.use('/api/auth', authRoutes);
@@ -54,4 +90,5 @@ app.use(errorHandler);
 // --- Start Server ---
 app.listen(PORT, () => {
   logger.info(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+  logger.info(`Allowed CORS origins: ${allowedOrigins.join(', ')}`);
 });
