@@ -7,31 +7,50 @@ const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [accessToken, setAccessToken] = useState(null);
-  const [loading, setLoading] = useState(true); // Start loading true to check session
+  // Read initial token from localStorage
+  const [accessToken, setAccessToken] = useState(localStorage.getItem('accessToken') || null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Try to get a new access token on initial load
+    // If we have a token in state, set it in localStorage
+    // (This syncs state to localStorage on initial load)
+    if (accessToken) {
+      localStorage.setItem('accessToken', accessToken);
+    }
+
     const checkUserSession = async () => {
       try {
         const { data } = await api.post('/api/auth/refresh');
+        // Save new token to state AND localStorage
         setAccessToken(data.accessToken);
-        // You might want to fetch user data here too
-        // For this demo, we'll fetch it on the dashboard
+        localStorage.setItem('accessToken', data.accessToken);
       } catch (error) {
-        console.log('No active session'); // Expected error on initial load without cookie
+        console.log('No active session');
+        // If refresh fails, clear any invalid token
+        setAccessToken(null);
+        localStorage.removeItem('accessToken');
+        setUser(null);
       } finally {
         setLoading(false);
       }
     };
-    checkUserSession();
-  }, []);
+
+    // If we don't have an access token, try to get one
+    if (!accessToken) {
+      checkUserSession();
+    } else {
+      // If we do have a token, we can skip the refresh for now
+      setLoading(false);
+    }
+  }, []); // Only run on initial mount
 
   const login = async (email, password) => {
     try {
       const { data } = await api.post('/api/auth/login', { email, password });
       setUser(data.user);
+      // Save new token to state AND localStorage
       setAccessToken(data.accessToken);
+      localStorage.setItem('accessToken', data.accessToken);
       toast.success('Login successful!');
       return data;
     } catch (error) {
@@ -45,7 +64,9 @@ export const AuthProvider = ({ children }) => {
     try {
       const { data } = await api.post('/api/auth/signup', { email, password });
       setUser(data.user);
+      // Save new token to state AND localStorage
       setAccessToken(data.accessToken);
+      localStorage.setItem('accessToken', data.accessToken);
       toast.success('Signup successful!');
       return data;
     } catch (error) {
@@ -58,12 +79,15 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     try {
       await api.post('/api/auth/logout');
+    } catch (error) {
+      console.error('Logout API call failed', error);
+      // We log out the frontend regardless of API success
+    } finally {
+      // Clear token from state AND localStorage
       setUser(null);
       setAccessToken(null);
+      localStorage.removeItem('accessToken');
       toast.success('Logged out');
-    } catch (error) {
-      console.error('Logout failed', error);
-      toast.error('Logout failed');
     }
   };
 
