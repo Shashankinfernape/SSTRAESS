@@ -3,7 +3,7 @@
 
 <span style="color: #E50914; font-family: 'Bebas Neue', sans-serif; font-size: 3em; letter-spacing: 0.1em;">SSTRAESS</span>
 
-Shashank's Session Token Refresh & Expiry Secure System 
+Shashank Suresh Token Refresh & Expiry Selvaganapathy Sarathy
 
 A robust foundation for modern web applications requiring secure, persistent user sessions using JWT authentication with automatic refresh.
 
